@@ -1,0 +1,20 @@
+{
+  "name": "mangobulk",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "npm run dev --prefix server",
+    "dev:web": "npm run dev --prefix mangomagic-next",
+    "build": "npm run build:web",
+    "build:web": "npm run build --prefix mangomagic-next",
+    "preview": "npm run build && npm run start",
+    "start": "concurrently \"npm run start:api\" \"npm run start:web\"",
+    "start:api": "cross-env NODE_ENV=production FRONTEND_URL=http://localhost:3000 npm run start --prefix server",
+    "start:web": "npm run start --prefix mangomagic-next"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3"
+  }
+}
