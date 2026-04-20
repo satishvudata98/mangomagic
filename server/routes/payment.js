@@ -16,9 +16,22 @@ const router = express.Router();
 const MIN_WEIGHT_KG = 1;
 const MAX_WEIGHT_KG = 25;
 
+function requireEnv(name) {
+  const value = process.env[name];
+
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+
+  return value;
+}
+
+const razorpayKeyId = requireEnv("RAZORPAY_KEY_ID");
+const razorpayKeySecret = requireEnv("RAZORPAY_KEY_SECRET");
+
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_placeholder",
-  key_secret: process.env.RAZORPAY_KEY_SECRET || "secret"
+  key_id: razorpayKeyId,
+  key_secret: razorpayKeySecret
 });
 
 function getPricePerKg(product) {
@@ -106,7 +119,7 @@ router.post("/payment/create-order", verifyToken, paymentCreateLimiter, async (r
     return res.json({
       razorpay_order_id: order.id,
       amount: order.amount,
-      key_id: process.env.RAZORPAY_KEY_ID
+      key_id: razorpayKeyId
     });
   } catch (error) {
     return next(error);
@@ -141,7 +154,7 @@ router.post("/payment/verify", verifyToken, paymentVerifyLimiter, async (req, re
     }
 
     const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "")
+      .createHmac("sha256", razorpayKeySecret)
       .update(`${razorpayOrderId}|${razorpayPaymentId}`)
       .digest("hex");
 
@@ -188,6 +201,11 @@ router.post("/payment/webhook", async (req, res, next) => {
   try {
     const signature = req.headers["x-razorpay-signature"];
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET || "";
+
+    if (!secret) {
+      return res.status(503).json({ error: "Razorpay webhook secret is not configured." });
+    }
+
     const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from("");
     const expectedSignature = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
 

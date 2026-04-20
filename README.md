@@ -11,6 +11,13 @@ MangoBulk is a single-container mango ordering app with:
 The active frontend lives in `mangomagic-next/` and the backend lives in `server/`.
 The production Docker setup runs both inside one container, with Express exposing a single public port and proxying frontend requests to the internal Next server.
 
+The production image is built as a minimal runtime image:
+
+- Express API server
+- production-only server dependencies
+- Next.js standalone output for the frontend
+- a small supervisor process that keeps both internal services in sync
+
 ## What Changed
 
 Authentication uses Firebase Phone Authentication.
@@ -285,39 +292,57 @@ Important:
 - `NEXT_PUBLIC_*` values must be passed during `docker build`
 - backend secrets such as `FIREBASE_*`, `SUPABASE_*`, and `RAZORPAY_*` stay in `--env-file` at `docker run` time
 - if your local `.env` still contains `NODE_ENV=development`, the container startup now overrides it to `production`
+- the container healthcheck now verifies both Express and the internal Next.js process
+
+## Temporary EC2 IP Testing
+
+If you do not have a domain yet and only need an EC2 public-IP deployment for testing, use the dedicated IP-test path instead of the Caddy/HTTPS stack.
+
+Use these files:
+
+- `docker-compose.aws.ip-test.yml`
+- `deploy/aws-ec2-ip-test.md`
+
+This path is designed for temporary testing only:
+
+- the app container is published directly
+- Caddy is not started
+- the app runs over HTTP, not HTTPS
+- the server allows a non-HTTPS `FRONTEND_URL` only for this explicit testing profile
+
+Important limitations:
+
+- this is not the final production deployment path
+- Firebase Google sign-in may still reject the EC2 public IP as an unauthorized origin
+- desktop popup auth is the best first check; mobile redirect auth is more fragile on temporary origins
 
 ## AWS EC2 Deployment
 
-The simplest secure production path is Docker Compose with Caddy:
+The recommended AWS path for this app is a single EC2 host running Docker Compose with Caddy in front of the app container.
 
-- Caddy is the only public container on ports `80` and `443`
-- the app container stays internal on the Docker network
-- Caddy handles HTTPS automatically once your domain points at the EC2 instance
+Why this is the default recommendation here:
 
-Files included in this repo for that setup:
+- it matches the app’s current architecture
+- it keeps deployment simple enough to operate without ECS overhead
+- it avoids exposing the app container directly to the internet
+- it gives you automatic HTTPS with a small reverse proxy footprint
+
+Use these files:
 
 - `docker-compose.aws.yml`
 - `deploy/Caddyfile`
+- `deploy/aws-ec2.md`
 
-High-level steps:
+If you are still testing on the raw EC2 public IP, use `docker-compose.aws.ip-test.yml` and `deploy/aws-ec2-ip-test.md` instead.
 
-1. Create an Ubuntu EC2 instance
-2. Open inbound `80` and `443` in the security group
-3. Install Docker and Docker Compose plugin
-4. Point your domain DNS `A` record to the EC2 public IP
-5. Copy `.env.example` to `.env` on the server and fill the real values
-6. Set `APP_DOMAIN` to your real domain
-7. Set `FRONTEND_URL` to `https://your-domain`
-8. Set `NEXT_PUBLIC_API_BASE_URL` to `https://your-domain`
-9. Build and start with `docker compose -f docker-compose.aws.yml up -d --build`
+The full step-by-step runbook is in `deploy/aws-ec2.md`.
 
-For production, do not keep localhost values in `.env` for `FRONTEND_URL` or `NEXT_PUBLIC_API_BASE_URL`.
-You should also remove any old `NODE_ENV=development` line from your server `.env`.
+Production expectations:
 
-Minimal EC2 hardening:
-
-- use an Ubuntu LTS instance
-- allow only `22`, `80`, and `443` in the security group
+- `APP_DOMAIN`, `FRONTEND_URL`, and `NEXT_PUBLIC_API_BASE_URL` should all use your real HTTPS domain
+- Docker build args for `NEXT_PUBLIC_*` values are required and will fail fast if missing
+- Razorpay API keys now fail fast at app startup instead of falling back to placeholders
+- the app container runs as a non-root user with a read-only filesystem and no Linux capabilities
 - restrict `22` to your IP only
 - keep Docker and the OS updated
 - do not store `.env` in git

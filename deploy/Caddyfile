@@ -8,5 +8,9 @@
     Permissions-Policy "camera=(), microphone=(), geolocation=()"
   }
 
-  reverse_proxy app:10000
+  reverse_proxy app:10000 {
+    health_uri /api/health?full=1
+    health_interval 30s
+    health_timeout 5s
+  }
 }

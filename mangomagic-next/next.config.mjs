@@ -21,7 +21,9 @@ function getPublicEnv(name, fallback = "") {
 }
 
 const nextConfig = {
+  output: "standalone",
   reactStrictMode: true,
+  poweredByHeader: false,
   env: {
     NEXT_PUBLIC_API_BASE_URL: getPublicEnv("NEXT_PUBLIC_API_BASE_URL", "http://localhost:10000"),
     NEXT_PUBLIC_FIREBASE_API_KEY: getPublicEnv("NEXT_PUBLIC_FIREBASE_API_KEY"),

@@ -16,8 +16,57 @@ const paymentRoutes = require("./routes/payment");
 const app = express();
 const port = Number(process.env.PORT || 10000);
 const nextAppUrl = process.env.NEXT_INTERNAL_URL || "http://127.0.0.1:3000";
+const deploymentProfile = process.env.DEPLOYMENT_PROFILE || "default";
+const allowInsecurePublicOrigin =
+  process.env.ALLOW_INSECURE_PUBLIC_ORIGIN === "1" || deploymentProfile === "ec2-ip-test";
 
 app.set("trust proxy", 1);
+
+function normalizeConfiguredOrigins(value) {
+  return String(value || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
+function validateProductionConfig() {
+  if (process.env.NODE_ENV !== "production") {
+    return;
+  }
+
+  const configuredOrigins = normalizeConfiguredOrigins(process.env.FRONTEND_URL);
+
+  if (configuredOrigins.length === 0) {
+    throw new Error("Missing required environment variable: FRONTEND_URL");
+  }
+
+  for (const origin of configuredOrigins) {
+    const url = new URL(origin);
+    const isLocalAddress = ["localhost", "127.0.0.1"].includes(url.hostname);
+
+    if (url.protocol !== "https:" && !isLocalAddress && !allowInsecurePublicOrigin) {
+      throw new Error("FRONTEND_URL must use https in production.");
+    }
+  }
+}
+
+async function isNextAppReachable() {
+  try {
+    const response = await fetch(nextAppUrl, {
+      method: "HEAD",
+      redirect: "manual",
+      signal: AbortSignal.timeout(2000)
+    });
+
+    return response.status < 500;
+  } catch (error) {
+    return false;
+  }
+}
+
+validateProductionConfig();
+
+const configuredOrigins = new Set(normalizeConfiguredOrigins(process.env.FRONTEND_URL));
 
 function getRequestOrigin(req) {
   const protocol = req.headers["x-forwarded-proto"] || req.protocol;
@@ -45,7 +94,7 @@ app.use(
           return originCallback(null, true);
         }
 
-        if (origin === process.env.FRONTEND_URL) {
+        if (configuredOrigins.has(origin)) {
           return originCallback(null, true);
         }
 
@@ -62,8 +111,18 @@ app.use(
 app.use(helmet());
 app.use(express.json({ limit: "1mb" }));
 
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok" });
+app.get("/api/health", async (req, res) => {
+  if (req.query.full === "1") {
+    const webHealthy = await isNextAppReachable();
+
+    if (!webHealthy) {
+      return res.status(503).json({ status: "degraded", api: "ok", web: "unreachable" });
+    }
+
+    return res.json({ status: "ok", api: "ok", web: "ok" });
+  }
+
+  return res.json({ status: "ok", api: "ok" });
 });
 
 app.use("/api", authRoutes);
@@ -101,4 +160,8 @@ app.use((error, req, res, next) => {
 app.listen(port, () => {
   console.log(`MangoMagic server listening on port ${port}`);
   console.log(`Proxying frontend traffic to ${nextAppUrl}`);
+
+  if (allowInsecurePublicOrigin) {
+    console.warn("Allowing insecure public origin for testing deployment profile.");
+  }
 });
