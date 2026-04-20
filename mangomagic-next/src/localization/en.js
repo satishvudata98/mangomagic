@@ -72,7 +72,20 @@ export const en = {
       savedPincode: (pincode) => `Saved pincode ${pincode}`,
       optionalBrowsing: "Pincode optional for browsing",
       floatingSignIn: "Sign in",
-      mobileSelected: (weight) => `${weight} kg selected`
+      mobileSelected: (weight) => `${weight} kg selected`,
+      // Geo & toast strings
+      geoDetecting: "Detecting your location…",
+      geoSuccess: (location, pincode) => `📍 Delivering to ${location} (${pincode})`,
+      geoServiceable: (pincode) => `📍 Pincode ${pincode} detected – delivery available!`,
+      geoNotServiceable: (pincode) => `Pincode ${pincode} detected but not serviceable yet.`,
+      geoDenied: "Location access denied. Enter your pincode manually.",
+      geoFailed: "Couldn't detect location. Enter your pincode below.",
+      toastServiceable: (location, pincode) => `✅ Delivering to ${location} (${pincode})`,
+      toastNotServiceable: (pincode) => `❌ Pincode ${pincode} is not serviceable yet.`,
+      locationChip: (label) => `📍 ${label}`,
+      changePincodeShort: "Change",
+      detectLocation: "Detect",
+      enterPincode: "Enter pincode"
     },
     cartDrawer: {
       closeAria: "Close cart drawer",

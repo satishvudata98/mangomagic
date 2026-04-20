@@ -1,9 +1,10 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { buildApiUrl } from "../lib/api";
 import { useAuth } from "./AuthContext";
 
 const DeliveryContext = createContext(null);
 const STORAGE_KEY = "mangomagic.delivery-pincode";
+const GEO_ATTEMPTED_KEY = "mangomagic.geo-attempted";
 
 function sanitizePincode(value) {
   return String(value || "")
@@ -40,12 +41,69 @@ function writeStoredPincode(pincode) {
   }
 }
 
+function markGeoAttempted() {
+  try {
+    window.sessionStorage.setItem(GEO_ATTEMPTED_KEY, "1");
+  } catch (error) {
+    // Ignore.
+  }
+}
+
+function hasGeoBeenAttempted() {
+  try {
+    return window.sessionStorage.getItem(GEO_ATTEMPTED_KEY) === "1";
+  } catch (error) {
+    return false;
+  }
+}
+
+// --- Geolocation helpers ---
+
+async function reverseGeocode(lat, lon) {
+  const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&zoom=18`;
+  const response = await fetch(url, {
+    headers: { "Accept-Language": "en" }
+  });
+
+  if (!response.ok) {
+    throw new Error("Reverse geocode failed");
+  }
+
+  const data = await response.json();
+  const postcode = data?.address?.postcode;
+
+  if (!postcode || postcode.replace(/\D/g, "").length !== 6) {
+    throw new Error("Could not determine pincode from location");
+  }
+
+  return sanitizePincode(postcode);
+}
+
+function requestGeolocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Geolocation not supported"));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => resolve({ lat: position.coords.latitude, lon: position.coords.longitude }),
+      (error) => reject(error),
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+    );
+  });
+}
+
+// geoStatus: "idle" | "detecting" | "success" | "denied" | "failed"
+
 export function DeliveryProvider({ children }) {
   const { profile } = useAuth();
   const [pincode, setPincodeState] = useState(() => readStoredPincode());
   const [checkResult, setCheckResult] = useState(null);
   const [checking, setChecking] = useState(false);
   const [allPincodes, setAllPincodes] = useState([]);
+  const [geoStatus, setGeoStatus] = useState("idle");
+  const geoRunning = useRef(false);
 
   const updatePincode = useCallback((value) => {
     const nextPincode = sanitizePincode(value);
@@ -58,6 +116,56 @@ export function DeliveryProvider({ children }) {
     setCheckResult(null);
     writeStoredPincode("");
   }, []);
+
+  // Auto-detect location via browser geolocation
+  const autoDetectLocation = useCallback(async () => {
+    if (geoRunning.current) {
+      return null;
+    }
+
+    geoRunning.current = true;
+    setGeoStatus("detecting");
+
+    try {
+      const coords = await requestGeolocation();
+      const detectedPincode = await reverseGeocode(coords.lat, coords.lon);
+
+      setPincodeState(detectedPincode);
+      writeStoredPincode(detectedPincode);
+      markGeoAttempted();
+      setGeoStatus("success");
+
+      return detectedPincode;
+    } catch (error) {
+      markGeoAttempted();
+
+      if (error?.code === 1) {
+        // PERMISSION_DENIED
+        setGeoStatus("denied");
+      } else {
+        setGeoStatus("failed");
+      }
+
+      return null;
+    } finally {
+      geoRunning.current = false;
+    }
+  }, []);
+
+  // On mount: try auto-detect if no pincode is stored and geo hasn't been attempted this session
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const stored = readStoredPincode();
+
+    if (stored || hasGeoBeenAttempted()) {
+      return;
+    }
+
+    autoDetectLocation();
+  }, [autoDetectLocation]);
 
   useEffect(() => {
     if (!profile?.pincode || pincode) {
@@ -147,7 +255,9 @@ export function DeliveryProvider({ children }) {
         checking,
         allPincodes,
         hasServiceablePincode,
-        selectedLocationLabel
+        selectedLocationLabel,
+        geoStatus,
+        autoDetectLocation
       }}
     >
       {children}

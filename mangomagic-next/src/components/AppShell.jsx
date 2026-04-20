@@ -15,7 +15,7 @@ export function AppShell({ children }) {
     <>
       <Toaster position="top-center" toastOptions={{ duration: 3500 }} />
       {!hideChrome ? <Navbar /> : null}
-      <main className={hideChrome ? "min-h-screen" : "min-h-screen px-4 pb-32 pt-40 md:px-6 md:pb-10 md:pt-44"}>
+      <main className={hideChrome ? "min-h-screen" : "min-h-screen px-3 pb-20 pt-28 sm:px-4 sm:pb-24 sm:pt-32 md:px-6 md:pb-10 md:pt-44"}>
         {children}
       </main>
       {!hideChrome ? <CartDrawer /> : null}

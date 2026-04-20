@@ -47,52 +47,54 @@ function ProductsPage({ initialProducts = null }) {
   }, [hasInitialProducts, pageCopy.loadError]);
 
   return (
-    <section className="mx-auto max-w-6xl space-y-8">
-      <div className="overflow-hidden rounded-[36px] bg-gradient-to-br from-[#9d3f0f] via-primary to-accent px-6 py-8 text-white shadow-2xl shadow-orange-200 md:px-8 md:py-10">
-        <div className="grid gap-6 lg:grid-cols-[1.25fr,0.75fr] lg:items-end">
+    <section className="mx-auto max-w-6xl space-y-4 sm:space-y-8">
+      {/* Hero — compact on mobile */}
+      <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#9d3f0f] via-primary to-accent px-4 py-5 text-white shadow-2xl shadow-orange-200 sm:rounded-[36px] sm:px-6 sm:py-8 md:px-8 md:py-10">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1.25fr,0.75fr] lg:items-end">
           <div>
-            <div className="inline-flex rounded-full bg-white/14 px-4 py-2 text-sm font-semibold uppercase tracking-[0.22em] text-orange-50 ring-1 ring-white/15">
+            <div className="inline-flex rounded-full bg-white/14 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-orange-50 ring-1 ring-white/15 sm:px-4 sm:py-2 sm:text-sm">
               {pageCopy.hero.eyebrow}
             </div>
-            <h1 className="mt-5 max-w-3xl font-display text-4xl font-black leading-tight md:text-5xl">
+            <h1 className="mt-3 max-w-3xl font-display text-2xl font-black leading-tight sm:mt-5 sm:text-4xl md:text-5xl">
               {pageCopy.hero.title}
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-orange-50/95 md:text-base">
+            <p className="mt-2 max-w-2xl text-xs leading-5 text-orange-50/95 sm:mt-4 sm:text-sm sm:leading-7 md:text-base">
               {pageCopy.hero.subtitle}
             </p>
 
-            <div className="mt-6 flex flex-wrap gap-3">
-              <span className="rounded-full bg-white/14 px-4 py-2 text-sm font-semibold text-orange-50 ring-1 ring-white/15">
+            <div className="mt-3 flex flex-wrap gap-2 sm:mt-6 sm:gap-3">
+              <span className="rounded-full bg-white/14 px-3 py-1.5 text-[10px] font-semibold text-orange-50 ring-1 ring-white/15 sm:px-4 sm:py-2 sm:text-sm">
                 {pageCopy.hero.tagFarmToDoor}
               </span>
-              <span className="rounded-full bg-white/14 px-4 py-2 text-sm font-semibold text-orange-50 ring-1 ring-white/15">
+              <span className="rounded-full bg-white/14 px-3 py-1.5 text-[10px] font-semibold text-orange-50 ring-1 ring-white/15 sm:px-4 sm:py-2 sm:text-sm">
                 {pageCopy.hero.tagVarieties(products.length)}
               </span>
-              <span className="rounded-full bg-white/14 px-4 py-2 text-sm font-semibold text-orange-50 ring-1 ring-white/15">
+              <span className="rounded-full bg-white/14 px-3 py-1.5 text-[10px] font-semibold text-orange-50 ring-1 ring-white/15 sm:px-4 sm:py-2 sm:text-sm">
                 {pageCopy.hero.tagOrganic}
               </span>
             </div>
           </div>
 
-          <div className="grid gap-4">
-            <div className="rounded-[28px] bg-white/14 p-5 backdrop-blur">
-              <p className="text-sm text-orange-100">{pageCopy.hero.cartTotal}</p>
-              <p className="mt-2 text-3xl font-extrabold">{formatRupees(cartTotal)}</p>
-              <p className="mt-2 text-sm text-orange-50">{pageCopy.hero.cartSummary(totalWeightKg, cartItems.length)}</p>
+          {/* Cart/perk summary — stacked on small, side-by-side on large */}
+          <div className="grid gap-2 sm:gap-4">
+            <div className="rounded-xl bg-white/14 p-3.5 backdrop-blur sm:rounded-[28px] sm:p-5">
+              <p className="text-xs text-orange-100 sm:text-sm">{pageCopy.hero.cartTotal}</p>
+              <p className="mt-1 text-2xl font-extrabold sm:mt-2 sm:text-3xl">{formatRupees(cartTotal)}</p>
+              <p className="mt-1 text-xs text-orange-50 sm:mt-2 sm:text-sm">{pageCopy.hero.cartSummary(totalWeightKg, cartItems.length)}</p>
             </div>
 
-            <div className="rounded-[28px] bg-white/14 p-5 backdrop-blur">
-              <div className="flex items-start gap-3">
-                <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white">
-                  <Sparkles size={18} />
+            <div className="rounded-xl bg-white/14 p-3.5 backdrop-blur sm:rounded-[28px] sm:p-5">
+              <div className="flex items-start gap-2.5 sm:gap-3">
+                <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white sm:mt-1 sm:h-11 sm:w-11">
+                  <Sparkles size={16} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-white">
+                  <p className="text-xs font-bold text-white sm:text-sm">
                     {perkState.nextPerk
                       ? pageCopy.hero.perkUnlock(perkState.remainingWeightKg, perkState.nextPerk.title)
                       : pageCopy.hero.perkUnlocked}
                   </p>
-                  <p className="mt-1 text-sm leading-6 text-orange-50/90">
+                  <p className="mt-0.5 text-xs leading-5 text-orange-50/90 sm:mt-1 sm:text-sm sm:leading-6">
                     {perkState.nextPerk?.description || pageCopy.hero.perkDescriptionFallback}
                   </p>
                 </div>
@@ -102,39 +104,40 @@ function ProductsPage({ initialProducts = null }) {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded-[30px] bg-white p-5 shadow-card">
-          <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-orange-100 text-primary">
-              <ShieldCheck size={18} />
+      {/* Highlights row — horizontal scroll on mobile, grid on large */}
+      <div className="-mx-3 flex gap-3 overflow-x-auto px-3 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:gap-4">
+        <div className="min-w-[260px] flex-shrink-0 rounded-2xl bg-white p-4 shadow-card sm:min-w-0 sm:rounded-[30px] sm:p-5">
+          <div className="flex items-start gap-2.5 sm:gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-primary sm:h-11 sm:w-11">
+              <ShieldCheck size={16} />
             </div>
             <div>
-              <p className="font-bold text-primary-dark">{pageCopy.highlights.qualityTitle}</p>
-              <p className="mt-1 text-sm leading-6 text-muted">{pageCopy.highlights.qualityBody}</p>
+              <p className="text-sm font-bold text-primary-dark">{pageCopy.highlights.qualityTitle}</p>
+              <p className="mt-0.5 text-xs leading-5 text-muted sm:mt-1 sm:text-sm sm:leading-6">{pageCopy.highlights.qualityBody}</p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-[30px] bg-white p-5 shadow-card">
-          <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-orange-100 text-primary">
-              <Sparkles size={18} />
+        <div className="min-w-[260px] flex-shrink-0 rounded-2xl bg-white p-4 shadow-card sm:min-w-0 sm:rounded-[30px] sm:p-5">
+          <div className="flex items-start gap-2.5 sm:gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-primary sm:h-11 sm:w-11">
+              <Sparkles size={16} />
             </div>
             <div>
-              <p className="font-bold text-primary-dark">{pageCopy.highlights.unboxingTitle}</p>
-              <p className="mt-1 text-sm leading-6 text-muted">{pageCopy.highlights.unboxingBody}</p>
+              <p className="text-sm font-bold text-primary-dark">{pageCopy.highlights.unboxingTitle}</p>
+              <p className="mt-0.5 text-xs leading-5 text-muted sm:mt-1 sm:text-sm sm:leading-6">{pageCopy.highlights.unboxingBody}</p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-[30px] bg-white p-5 shadow-card">
-          <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-orange-100 text-primary">
-              <ArrowRight size={18} />
+        <div className="min-w-[260px] flex-shrink-0 rounded-2xl bg-white p-4 shadow-card sm:min-w-0 sm:rounded-[30px] sm:p-5">
+          <div className="flex items-start gap-2.5 sm:gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-primary sm:h-11 sm:w-11">
+              <ArrowRight size={16} />
             </div>
             <div>
-              <p className="font-bold text-primary-dark">{pageCopy.highlights.deliveryTitle}</p>
-              <p className="mt-1 text-sm leading-6 text-muted">
+              <p className="text-sm font-bold text-primary-dark">{pageCopy.highlights.deliveryTitle}</p>
+              <p className="mt-0.5 text-xs leading-5 text-muted sm:mt-1 sm:text-sm sm:leading-6">
                 {hasServiceablePincode
                   ? pageCopy.highlights.deliveryReady(selectedLocationLabel, pincode)
                   : pageCopy.highlights.deliveryPending}
@@ -149,7 +152,7 @@ function ProductsPage({ initialProducts = null }) {
           <LoadingSpinner label={pageCopy.loading} />
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
           {products.map((product) => (
             <ProductCard
               key={product.id}
@@ -164,16 +167,17 @@ function ProductsPage({ initialProducts = null }) {
         </div>
       )}
 
+      {/* Sticky cart bar — compact on mobile */}
       {cartItems.length ? (
-        <div className="sticky bottom-28 rounded-[28px] bg-white p-5 shadow-2xl shadow-orange-100 md:bottom-6">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-50 text-primary">
-                <ShoppingBag size={20} />
+        <div className="sticky bottom-16 rounded-2xl bg-white p-3.5 shadow-2xl shadow-orange-100 sm:bottom-28 sm:rounded-[28px] sm:p-5 md:bottom-6">
+          <div className="flex items-center justify-between gap-3 sm:flex-row sm:gap-4">
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-50 text-primary sm:h-12 sm:w-12">
+                <ShoppingBag size={18} />
               </div>
               <div>
-                <p className="font-bold text-primary-dark">{pageCopy.stickySelected(totalWeightKg)}</p>
-                <p className="text-sm text-muted">
+                <p className="text-sm font-bold text-primary-dark">{pageCopy.stickySelected(totalWeightKg)}</p>
+                <p className="hidden text-sm text-muted sm:block">
                   {perkState.nextPerk
                     ? pageCopy.stickyUnlock(perkState.remainingWeightKg, perkState.nextPerk.title)
                     : pageCopy.stickyUnlocked}
@@ -183,10 +187,10 @@ function ProductsPage({ initialProducts = null }) {
             <button
               type="button"
               onClick={openCart}
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-white transition hover:bg-primary-dark"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-primary px-5 text-sm font-bold text-white transition hover:bg-primary-dark sm:min-h-12 sm:px-6 sm:py-3"
             >
               <span>{pageCopy.reviewCart}</span>
-              <ArrowRight size={16} />
+              <ArrowRight size={14} />
             </button>
           </div>
         </div>
