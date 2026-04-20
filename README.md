@@ -1,28 +1,25 @@
 # MangoBulk
 
-MangoBulk is a single-server mango ordering app with:
+MangoBulk is a single-container mango ordering app with:
 
 - Next.js App Router + Tailwind CSS
 - Node.js + Express
 - Firebase Authentication for phone OTP login
-- Firebase Firestore for app data
+- Supabase for app data
 - Razorpay for payments
 
-The active frontend now lives in `mangomagic-next/`.
-The old Vite frontend remains in `client/` as a rollback path during migration.
-
-This project no longer uses Supabase.
+The active frontend lives in `mangomagic-next/` and the backend lives in `server/`.
+The production Docker setup runs both inside one container, with Express exposing a single public port and proxying frontend requests to the internal Next server.
 
 ## What Changed
 
-Authentication now uses Firebase Phone Authentication.
+Authentication uses Firebase Phone Authentication.
 
 - OTP is sent by Firebase Auth
 - OTP verification signs the user in automatically
 - The frontend sends Firebase ID tokens to the backend
 - The backend verifies Firebase ID tokens with Firebase Admin
-- User profiles are stored in Firestore
-- Products, serviceable pincodes, and orders are also stored in Firestore
+- User profiles, products, serviceable pincodes, and orders are stored in Supabase
 
 ## Prerequisites
 
@@ -31,7 +28,7 @@ Install these first:
 1. Node.js 20+
 2. npm
 3. A Firebase project
-4. A Firestore database
+4. A Supabase project
 5. Firebase Authentication with Phone enabled
 6. A Firebase service account for the backend
 7. A Razorpay account with test keys
@@ -39,7 +36,7 @@ Install these first:
 Optional:
 
 1. Docker Desktop
-2. Render account for deployment
+2. An AWS EC2 instance for deployment
 
 ## Firebase Setup
 
@@ -48,7 +45,7 @@ Official docs used for this setup:
 - Firebase Phone Auth for web: `https://firebase.google.com/docs/auth/web/phone-auth`
 - Firebase test phone numbers: `https://firebase.google.com/docs/auth/web/test-phone-numbers`
 - Firebase Admin SDK setup: `https://firebase.google.com/docs/admin/setup`
-- Firestore quickstart: `https://firebase.google.com/docs/firestore/quickstart`
+- Supabase project setup: `https://supabase.com/docs/guides/getting-started`
 
 ## 1. Create a Firebase Project
 
@@ -91,20 +88,16 @@ In Firebase Authentication settings, make sure these are allowed:
 
 - `localhost`
 - your production domain later
-- your Render domain later, if using Render
+- your EC2-backed production domain later
 
-## 5. Create Firestore Database
+## 5. Create Supabase Project
 
-1. In Firebase console go to `Firestore Database`
-2. Click `Create database`
-3. Choose `Production mode` or `Test mode`
+1. In Supabase create a project
+2. Copy the project URL
+3. Copy the service role key
+4. Run the schema in `server/db/supabaseSchema.sql`
 
-Recommended:
-
-- Use `Production mode`
-- Keep client Firestore access locked down if you only want the backend to write data
-
-This app’s backend writes and reads Firestore using Firebase Admin.
+This app’s backend writes and reads order, profile, product, and pincode data through Supabase.
 
 ## 6. Create a Service Account for the Backend
 
@@ -149,14 +142,18 @@ FIREBASE_PROJECT_ID=your-firebase-project-id
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project-id.iam.gserviceaccount.com
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY\n-----END PRIVATE KEY-----\n"
 
+# Supabase
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+
 # Razorpay
 RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxx
 RAZORPAY_KEY_SECRET=your-razorpay-secret
 RAZORPAY_WEBHOOK_SECRET=your-webhook-secret
 
 # App
+APP_DOMAIN=example.com
 PORT=10000
-NODE_ENV=development
 FRONTEND_URL=http://localhost:3000
 
 # Next.js Web App (preferred frontend)
@@ -171,31 +168,20 @@ NEXT_PUBLIC_FIREBASE_APP_ID=1:1234567890:web:abcdef123456
 NEXT_PUBLIC_API_BASE_URL=http://localhost:10000
 ```
 
-## Firestore Collections Used by This App
+## Supabase Tables Used by This App
 
-The backend uses these collections:
+The backend uses these tables:
 
 - `profiles`
 - `products`
 - `serviceable_pincodes`
 - `orders`
 
-Document structure overview:
-
-- `profiles/{uid}`
-  Stores `phone`, `full_name`, `delivery_address`, `pincode`
-- `products/{productId}`
-  Stores mango catalog and prices
-- `serviceable_pincodes/{pincode}`
-  Stores active delivery pincodes
-- `orders/{orderId}`
-  Stores order header and inline `order_items`
-
-## Seed Firestore with Products and Pincodes
+## Seed Products and Pincodes
 
 Seed data lives in:
 
-- [seedData.js](D:/mangomagic/server/db/seedData.js)
+- [server/db/seedData.js](server/db/seedData.js)
 
 Run this command after `.env` is ready:
 
@@ -208,7 +194,7 @@ This will create:
 - sample mango products
 - sample serviceable pincodes
 
-You can edit the data in [seedData.js](D:/mangomagic/server/db/seedData.js) before seeding.
+You can edit the data in [server/db/seedData.js](server/db/seedData.js) before seeding.
 
 ## Install Dependencies
 
@@ -216,7 +202,6 @@ Run from the project root:
 
 ```powershell
 npm install
-npm install --prefix client
 npm install --prefix server
 ```
 
@@ -266,7 +251,15 @@ npm run start
 Build:
 
 ```powershell
-docker build -t mangobulk .
+docker build -t mangobulk ^
+  --build-arg NEXT_PUBLIC_API_BASE_URL=http://localhost:10000 ^
+  --build-arg NEXT_PUBLIC_FIREBASE_API_KEY=your-firebase-api-key ^
+  --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-firebase-auth-domain ^
+  --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-firebase-project-id ^
+  --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-firebase-storage-bucket ^
+  --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-firebase-messaging-sender-id ^
+  --build-arg NEXT_PUBLIC_FIREBASE_APP_ID=your-firebase-app-id ^
+  .
 ```
 
 Run:
@@ -279,6 +272,59 @@ Open:
 
 - `http://localhost:10000`
 
+How this works now:
+
+- Express listens on port `10000`
+- Next runs internally on port `3000`
+- Express proxies all non-`/api` requests to the internal Next server
+
+This means you only need to publish port `10000` from the container.
+
+Important:
+
+- `NEXT_PUBLIC_*` values must be passed during `docker build`
+- backend secrets such as `FIREBASE_*`, `SUPABASE_*`, and `RAZORPAY_*` stay in `--env-file` at `docker run` time
+- if your local `.env` still contains `NODE_ENV=development`, the container startup now overrides it to `production`
+
+## AWS EC2 Deployment
+
+The simplest secure production path is Docker Compose with Caddy:
+
+- Caddy is the only public container on ports `80` and `443`
+- the app container stays internal on the Docker network
+- Caddy handles HTTPS automatically once your domain points at the EC2 instance
+
+Files included in this repo for that setup:
+
+- `docker-compose.aws.yml`
+- `deploy/Caddyfile`
+
+High-level steps:
+
+1. Create an Ubuntu EC2 instance
+2. Open inbound `80` and `443` in the security group
+3. Install Docker and Docker Compose plugin
+4. Point your domain DNS `A` record to the EC2 public IP
+5. Copy `.env.example` to `.env` on the server and fill the real values
+6. Set `APP_DOMAIN` to your real domain
+7. Set `FRONTEND_URL` to `https://your-domain`
+8. Set `NEXT_PUBLIC_API_BASE_URL` to `https://your-domain`
+9. Build and start with `docker compose -f docker-compose.aws.yml up -d --build`
+
+For production, do not keep localhost values in `.env` for `FRONTEND_URL` or `NEXT_PUBLIC_API_BASE_URL`.
+You should also remove any old `NODE_ENV=development` line from your server `.env`.
+
+Minimal EC2 hardening:
+
+- use an Ubuntu LTS instance
+- allow only `22`, `80`, and `443` in the security group
+- restrict `22` to your IP only
+- keep Docker and the OS updated
+- do not store `.env` in git
+- use a separate non-root SSH user on the instance
+
+The app container is not published directly in that setup.
+
 ## Phone OTP Flow
 
 1. User enters mobile number
@@ -288,7 +334,7 @@ Open:
 5. Firebase signs the user in automatically
 6. Frontend sends Firebase ID token to the backend
 7. Backend verifies the token with Firebase Admin
-8. Backend loads or creates the user profile in Firestore
+8. Backend loads or creates the user profile in Supabase
 
 ## Why This Avoids Your Previous SMS Provider Problem
 
@@ -352,26 +398,26 @@ So:
 
 The backend verifies Firebase ID tokens in:
 
-- [verifyToken.js](D:/mangomagic/server/middleware/verifyToken.js)
+- [server/middleware/verifyToken.js](server/middleware/verifyToken.js)
 
 It uses Firebase Admin SDK configured in:
 
-- [firebaseAdmin.js](D:/mangomagic/server/db/firebaseAdmin.js)
+- [server/db/firebaseAdmin.js](server/db/firebaseAdmin.js)
 
 ## Main Auth Files
 
 Frontend:
 
-- [firebase.js](D:/mangomagic/client/src/lib/firebase.js)
-- [AuthContext.jsx](D:/mangomagic/client/src/context/AuthContext.jsx)
-- [LoginPage.jsx](D:/mangomagic/client/src/pages/LoginPage.jsx)
-- [OtpPage.jsx](D:/mangomagic/client/src/pages/OtpPage.jsx)
+- [mangomagic-next/src/lib/firebase.js](mangomagic-next/src/lib/firebase.js)
+- [mangomagic-next/src/context/AuthContext.jsx](mangomagic-next/src/context/AuthContext.jsx)
+- [mangomagic-next/src/page-components/LoginPage.jsx](mangomagic-next/src/page-components/LoginPage.jsx)
+- [mangomagic-next/src/page-components/OtpPage.jsx](mangomagic-next/src/page-components/OtpPage.jsx)
 
 Backend:
 
-- [verifyToken.js](D:/mangomagic/server/middleware/verifyToken.js)
-- [auth.js](D:/mangomagic/server/routes/auth.js)
-- [firebaseAdmin.js](D:/mangomagic/server/db/firebaseAdmin.js)
+- [server/middleware/verifyToken.js](server/middleware/verifyToken.js)
+- [server/routes/auth.js](server/routes/auth.js)
+- [server/db/firebaseAdmin.js](server/db/firebaseAdmin.js)
 
 ## End-to-End Local Test
 
@@ -379,7 +425,7 @@ After setup:
 
 1. Fill `.env`
 2. Install dependencies
-3. Seed Firestore with `npm run seed --prefix server`
+3. Seed Supabase with `npm run seed --prefix server`
 4. Start the app with `npm run dev`
 5. Open `http://localhost:3000`
 6. Use a Firebase test phone number
@@ -388,7 +434,7 @@ After setup:
 9. Add products to cart
 10. Save address
 11. Pay with Razorpay test mode
-12. Verify the order appears in Firestore
+12. Verify the order appears in Supabase
 
 Razorpay test card:
 
@@ -397,25 +443,12 @@ Razorpay test card:
 - CVV: any 3 digits
 - OTP: `1221`
 
-## Deploy to Render
-
-1. Push the repo to GitHub
-2. Create a Render Web Service
-3. Use the Dockerfile
-4. Add all `.env` values in Render
-5. Set production frontend URL values correctly
-
-Important:
-
-- `FRONTEND_URL` should be your deployed frontend domain
-- `NEXT_PUBLIC_API_BASE_URL` should be your deployed backend base URL
-
 ## Quick Start
 
 1. Create Firebase project
 2. Add Firebase web app
 3. Enable Phone auth
-4. Create Firestore database
+4. Create Supabase project and schema
 5. Create service account
 6. Fill `.env`
 7. Install dependencies
@@ -464,10 +497,10 @@ Check:
 
 - `RAZORPAY_KEY_SECRET`
 - backend logs
-- Firestore permissions or service account configuration
+- Supabase credentials and table schema
 
 ## Final Note
 
-This repo is now structured for Firebase-first authentication and Firestore-backed app data.
+This repo is now structured for Firebase-first authentication, Supabase-backed app data, and single-port Docker deployment.
 
 If you want, I can do one more pass and add a `FIREBASE-LAUNCH-CHECKLIST.md` file with a shorter exact checklist just for console setup and launch.  

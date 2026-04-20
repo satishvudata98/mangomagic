@@ -11,8 +11,8 @@
     "build:web": "npm run build --prefix mangomagic-next",
     "preview": "npm run build && npm run start",
     "start": "concurrently \"npm run start:api\" \"npm run start:web\"",
-    "start:api": "cross-env NODE_ENV=production FRONTEND_URL=http://localhost:3000 npm run start --prefix server",
-    "start:web": "npm run start --prefix mangomagic-next"
+    "start:api": "cross-env NODE_ENV=production PORT=10000 NEXT_INTERNAL_URL=http://127.0.0.1:3000 npm run start --prefix server",
+    "start:web": "cross-env NODE_ENV=production PORT=3000 npm run start --prefix mangomagic-next"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
