@@ -14,7 +14,6 @@ const paymentRoutes = require("./routes/payment");
 
 const app = express();
 const port = Number(process.env.PORT || 10000);
-const currentDir = __dirname;
 
 app.set("trust proxy", 1);
 
@@ -72,11 +71,6 @@ app.use((error, req, res, next) => {
   const message = error?.message || "Internal server error.";
   const statusCode = error?.statusCode || 500;
   return res.status(statusCode).json({ error: message });
-});
-
-app.use(express.static(path.join(currentDir, "../public")));
-app.get("*", (req, res) => {
-  res.sendFile(path.join(currentDir, "../public/index.html"));
 });
 
 app.listen(port, () => {
