@@ -73,6 +73,15 @@ function getRequestOrigin(req) {
   return `${protocol}://${req.get("host")}`;
 }
 
+function getHelmetOptions() {
+  return {
+    contentSecurityPolicy: false,
+    crossOriginOpenerPolicy: allowInsecurePublicOrigin ? false : undefined,
+    originAgentCluster: allowInsecurePublicOrigin ? false : undefined,
+    strictTransportSecurity: allowInsecurePublicOrigin ? false : undefined
+  };
+}
+
 app.use(
   "/api/payment/webhook",
   express.raw({
@@ -108,7 +117,7 @@ app.use(
     });
   })
 );
-app.use(helmet());
+app.use(helmet(getHelmetOptions()));
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", async (req, res) => {
